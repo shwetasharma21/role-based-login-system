@@ -8,7 +8,7 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 9696;
 
-// Connect to the MongoDB cluster
+// Connect to the MongoDB cluster (MongoDB Atlas)
 mongoose.connect(
   process.env.MONGODB_URI,
   { useNewUrlParser: true, useUnifiedTopology: true },
@@ -17,6 +17,7 @@ mongoose.connect(
     console.log("Mongoose is connected");
   }
 );
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("Welcome to Role Based Login System");
