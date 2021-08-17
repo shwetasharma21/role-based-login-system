@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const { hashPassword, hashCompare } = require("../utils/hashing");
 const { validateEmail } = require("../utils/email");
+const { verifyUser } = require("../middleware/auth");
 const User = require("../model/user");
 
 const router = express.Router();
@@ -49,7 +50,7 @@ router.post("/register", async (req, res) => {
 
     //token expires in 15 min
     const token = jwt.sign(payload, process.env.JWT_KEY, {
-      expiresIn: 60 * 15,
+      expiresIn: 60 * 30,
     });
 
     res
@@ -89,9 +90,41 @@ router.post("/login", async (req, res) => {
     role: user.role,
   };
 
-  const token = jwt.sign(payload, process.env.JWT_KEY, { expiresIn: 60 * 15 });
+  const token = jwt.sign(payload, process.env.JWT_KEY, { expiresIn: 60 * 30 });
 
   res.status(200).json({ success: true, message: "Successful Login", token });
+});
+
+//Middleware for user verification
+router.use(verifyUser);
+
+router.get("/getPayload", (req, res) => {
+  res.send(req.headers.payload);
+});
+
+router.put("/updateRole/:userId", async (req, res) => {
+  const { role: adminRole } = req.headers.payload;
+  if (adminRole !== "super_admin")
+    return res.status(403).json({ success: false, message: "Access Denied" });
+
+  const userId = req.params.userId;
+  const { role } = req.body;
+
+  if (!userId)
+    return res
+      .status(400)
+      .json({ success: false, message: "'userId' is missing from params" });
+  if (!role)
+    return res
+      .status(400)
+      .json({ success: false, message: "'role' is missing from body" });
+
+  const roles = ["user", "admin", "super_admin"];
+  if (!roles.includes(role))
+    return res.status(400).json({ success: false, message: "Invalid 'role'" });
+
+  const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
+  res.send(user);
 });
 
 module.exports = router;
